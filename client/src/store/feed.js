@@ -33,8 +33,8 @@ export const useFeed = create((set, get) => ({
   removePost: (id) => set((s) => ({ posts: s.posts.filter((p) => p.id !== id) })),
   patchPost: (id, patch) => set((s) => ({ posts: s.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
 
-  async create(content) {
-    const post = await api('/posts', { method: 'POST', body: { content } });
+  async create(content, images = []) {
+    const post = await api('/posts', { method: 'POST', body: { content, images } });
     get().addPost(post);
   },
   async toggleLike(id) {

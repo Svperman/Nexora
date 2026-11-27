@@ -13,6 +13,9 @@ export const config = {
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET || '',
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL || '15m',
   refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS || 30),
+  // Nombre de proxys devant l'API : 1 (Ingress k8s, Render seul), 2 (Vercel rewrite -> Render).
+  // Sert à retrouver la vraie IP client (rate limiting, journal d'audit).
+  trustProxy: Number(process.env.TRUST_PROXY || 1),
 };
 
 if (config.isProd) {

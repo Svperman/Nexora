@@ -8,6 +8,8 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write      # jeton OIDC pour la signature Cosign sans clé (Sigstore)
+  attestations: write  # attestation de provenance SLSA
 
 jobs:
   build:
@@ -37,18 +39,31 @@ jobs:
           tags: |
             type=sha,format=long
             type=raw,value=main
-      - uses: docker/build-push-action@v6
+      - id: build
+        uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          sbom: true            # SBOM SPDX attaché à l'image
+          provenance: mode=max  # provenance BuildKit
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
       - name: Scan Trivy de l'image
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ steps.img.outputs.repo }}:sha-${{ github.sha }}
+          image-ref: ${{ steps.img.outputs.repo }}@${{ steps.build.outputs.digest }}
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
+      # Signature et attestation seulement après un scan réussi, sur le digest (jamais sur un tag mutable).
+      - uses: sigstore/cosign-installer@v3
+      - name: Signature Cosign (keyless, identité OIDC du workflow)
+        run: cosign sign --yes "${{ steps.img.outputs.repo }}@${{ steps.build.outputs.digest }}"
+      - name: Attestation de provenance SLSA
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ steps.img.outputs.repo }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true

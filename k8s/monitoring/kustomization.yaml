@@ -1,0 +1,21 @@
+# Observabilité Nexora — nécessite kube-prometheus-stack (Prometheus Operator, Grafana, Alertmanager)
+# et Jaeger dans le namespace "observability". Voir k8s/README.md.
+# Appliquer : kubectl apply -k k8s/monitoring   (namespace cible : nexora-staging)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: nexora-staging
+
+resources:
+  - servicemonitors.yaml
+  - alerts.yaml
+  - networkpolicies.yaml
+
+configMapGenerator:
+  - name: nexora-grafana-dashboard
+    files:
+      - nexora-dashboard.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"   # détecté par le sidecar Grafana de kube-prometheus-stack

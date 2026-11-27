@@ -1,0 +1,36 @@
+# Optionnel — nécessite Kyverno (https://kyverno.io).
+# Refuse dans les namespaces Nexora toute image ghcr.io/svperman/nexora-* qui n'a pas été
+# signée par le workflow "Images" de ce dépôt (signature Cosign keyless + attestation SLSA).
+# Appliquer : kubectl apply -f k8s/policies/verify-images.yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: nexora-verify-images
+spec:
+  validationFailureAction: Enforce
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: signature-et-provenance
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [nexora-staging, nexora-production]
+      verifyImages:
+        - imageReferences: ["ghcr.io/svperman/nexora-*"]
+          mutateDigest: true   # remplace le tag par le digest vérifié
+          verifyDigest: true
+          attestors:
+            - entries:
+                - keyless:
+                    issuer: https://token.actions.githubusercontent.com
+                    subject: "https://github.com/Svperman/Nexora/.github/workflows/images.yml@refs/heads/main"
+                    rekor: { url: https://rekor.sigstore.dev }
+          attestations:
+            - type: https://slsa.dev/provenance/v1
+              attestors:
+                - entries:
+                    - keyless:
+                        issuer: https://token.actions.githubusercontent.com
+                        subject: "https://github.com/Svperman/Nexora/.github/workflows/images.yml@refs/heads/main"
+                        rekor: { url: https://rekor.sigstore.dev }

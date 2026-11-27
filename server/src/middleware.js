@@ -44,5 +44,8 @@ export function errorHandler(err, req, res, _next) {
   if (err?.name === 'CastError') return res.status(400).json({ error: 'Identifiant invalide' });
   const status = err.status || 500;
   if (status >= 500) logger.error({ err, url: req.originalUrl }, 'Erreur serveur');
-  res.status(status).json({ error: status >= 500 ? 'Erreur interne' : err.message });
+  res.status(status).json({
+    error: status >= 500 ? 'Erreur interne' : err.message,
+    ...(status < 500 && err.reason ? { reason: err.reason } : {}),
+  });
 }

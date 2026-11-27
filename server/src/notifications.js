@@ -1,6 +1,21 @@
 import { Queue } from 'bullmq';
 import { Notification } from './models.js';
 import { logger } from './logger.js';
+import { notificationsTotal, registry } from './metrics.js';
+import client from 'prom-client';
+
+// Profondeur de la file BullMQ, lue au moment du scraping.
+new client.Gauge({
+  name: 'nexora_queue_jobs',
+  help: 'Jobs dans la file des notifications par état',
+  labelNames: ['state'],
+  registers: [registry],
+  async collect() {
+    if (!queue) return;
+    const counts = await queue.getJobCounts('waiting', 'active', 'delayed', 'failed');
+    for (const [state, n] of Object.entries(counts)) this.set({ state }, n);
+  },
+});
 
 export const QUEUE_NAME = 'notifications';
 export const userRoom = (id) => `user:${id}`;
@@ -28,6 +43,7 @@ export async function processNotification(data, emitter) {
 
 export async function notify(data) {
   try {
+    notificationsTotal.inc({ type: data.type, mode: queue ? 'queued' : 'direct' });
     if (queue) {
       await queue.add('notify', data, { attempts: 3, backoff: { type: 'exponential', delay: 1000 }, removeOnComplete: 1000 });
     } else {

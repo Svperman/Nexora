@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { User, Post, Comment, Message, Notification, RefreshToken, AuditLog } from '../models.js';
 import { ah, HttpError, requireAuth } from '../middleware.js';
 import { REFRESH_COOKIE } from '../auth.js';
+import { deleteImages } from './uploads.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -22,6 +23,17 @@ router.get('/users/:id', ah(async (req, res) => {
   if (!user) throw new HttpError(404, 'Utilisateur introuvable');
   res.json({ user: user.toJSON() });
 }));
+
+/** Serveurs ICE pour WebRTC : STUN public + TURN optionnel (TURN_SERVERS, JSON). */
+router.get('/rtc/config', (_req, res) => {
+  let turn = [];
+  try {
+    turn = process.env.TURN_SERVERS ? JSON.parse(process.env.TURN_SERVERS) : [];
+  } catch {
+    turn = [];
+  }
+  res.json({ iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }, ...turn] });
+});
 
 // ---- RGPD -----------------------------------------------------------------
 
@@ -50,7 +62,8 @@ router.patch('/me/consents', ah(async (req, res) => {
 /** Droit à l'effacement : suppression du compte et des contenus associés. */
 router.delete('/me', ah(async (req, res) => {
   const id = req.user.id;
-  const posts = await Post.find({ author: id }).select('_id');
+  const posts = await Post.find({ author: id }).select('_id images');
+  await deleteImages(posts.flatMap((p) => p.images));
   await Promise.all([
     Comment.deleteMany({ $or: [{ author: id }, { post: { $in: posts.map((p) => p._id) } }] }),
     Post.deleteMany({ author: id }),

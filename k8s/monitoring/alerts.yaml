@@ -1,0 +1,68 @@
+# Règles d'alerte évaluées par Prometheus, routées par Alertmanager selon le label "severity".
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nexora-alerts
+  labels: { release: kube-prometheus-stack }
+spec:
+  groups:
+    - name: nexora.api
+      rules:
+        - alert: NexoraApiDown
+          expr: sum(up{job="nexora-api"}) == 0
+          for: 2m
+          labels: { severity: critical }
+          annotations:
+            summary: "API Nexora injoignable"
+            description: "Aucun pod nexora-api ne répond au scraping depuis 2 minutes."
+        - alert: NexoraHighErrorRate
+          expr: |
+            sum(rate(nexora_http_request_duration_seconds_count{status=~"5.."}[5m]))
+              / clamp_min(sum(rate(nexora_http_request_duration_seconds_count[5m])), 1e-9) > 0.05
+          for: 5m
+          labels: { severity: critical }
+          annotations:
+            summary: "Plus de 5 % d'erreurs 5xx"
+            description: "Taux d'erreurs serveur : {{ $value | humanizePercentage }} sur 5 min."
+        - alert: NexoraHighLatency
+          expr: |
+            histogram_quantile(0.95, sum by (le) (rate(nexora_http_request_duration_seconds_bucket[5m]))) > 1
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: "Latence p95 > 1 s"
+            description: "p95 actuel : {{ $value | humanizeDuration }}."
+        - alert: NexoraPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{container=~"api|worker|web"}[30m]) > 3
+          labels: { severity: warning }
+          annotations:
+            summary: "Redémarrages répétés de {{ $labels.pod }}"
+        - alert: NexoraHpaAtMax
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler=~"nexora-.*"}
+              >= kube_horizontalpodautoscaler_spec_max_replicas{horizontalpodautoscaler=~"nexora-.*"}
+          for: 15m
+          labels: { severity: warning }
+          annotations:
+            summary: "{{ $labels.horizontalpodautoscaler }} au maximum de réplicas depuis 15 min"
+    - name: nexora.worker
+      rules:
+        - alert: NexoraQueueBacklog
+          expr: max(nexora_queue_jobs{state="waiting"}) > 500
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: "File des notifications en retard"
+            description: "{{ $value }} jobs en attente depuis 10 min : vérifier le worker."
+        - alert: NexoraJobFailures
+          expr: sum(rate(nexora_jobs_total{status="failed"}[10m])) > 0.1
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: "Échecs répétés des jobs du worker"
+        - alert: NexoraWorkerDown
+          expr: absent(up{job=~".*nexora-worker.*"} == 1)
+          for: 5m
+          labels: { severity: critical }
+          annotations:
+            summary: "Aucun worker Nexora actif : les notifications ne partent plus"

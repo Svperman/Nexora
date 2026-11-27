@@ -36,11 +36,35 @@ export async function api(path, { method = 'GET', body, retry = true } = {}) {
     return api(path, { method, body, retry: false });
   }
   if (res.status === 204) return null;
+  return parseResponse(res);
+}
+
+async function parseResponse(res) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data.error || `Erreur ${res.status}`);
+    err.status = res.status;
     err.details = data.details;
+    err.reason = data.reason;
     throw err;
   }
   return data;
+}
+
+/** Envoi d'un fichier (multipart) vers /api/uploads. */
+export async function uploadImage(file, retry = true) {
+  const body = new FormData();
+  body.append('image', file);
+  const token = useAuth.getState().accessToken;
+  const res = await fetch('/api/uploads', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body,
+  });
+  if (res.status === 401 && retry && token) {
+    await refreshSession();
+    return uploadImage(file, false);
+  }
+  return parseResponse(res);
 }

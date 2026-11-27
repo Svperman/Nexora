@@ -1,0 +1,36 @@
+# Blueprint Render : API Nexora (Express + Socket.IO).
+# Render > New > Blueprint > choisir le dépôt Svperman/Nexora. Les valeurs "sync: false"
+# sont demandées dans le tableau de bord Render à la création (elles ne sont jamais dans Git).
+services:
+  - type: web
+    name: nexora-api            # => https://nexora-api.onrender.com (adapter client/vercel.json si le nom change)
+    runtime: node
+    rootDir: server
+    plan: free                  # s'endort après 15 min sans trafic ; réveil ~30-60 s
+    region: frankfurt
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Requêtes REST : navigateur -> Vercel (rewrite) -> Render => 2 proxys de confiance.
+      - key: TRUST_PROXY
+        value: "2"
+      - key: CLIENT_ORIGIN
+        value: https://client-six-xi-62.vercel.app,https://client-svperman.vercel.app
+      - key: JWT_ACCESS_SECRET
+        generateValue: true     # Render génère un secret aléatoire
+      - key: MONGO_URI
+        sync: false             # à coller : URI MongoDB Atlas
+      - key: CLOUDINARY_URL
+        sync: false             # optionnel : sans lui, l'upload d'images renvoie 503 en production
+      - key: MODERATION_ENABLED
+        value: "false"
+      - key: ANTHROPIC_API_KEY
+        sync: false             # optionnel : requis seulement si MODERATION_ENABLED=true
+      - key: TURN_SERVERS
+        sync: false             # optionnel : JSON des serveurs TURN pour les appels

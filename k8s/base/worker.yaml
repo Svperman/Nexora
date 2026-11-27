@@ -22,10 +22,18 @@ spec:
       containers:
         - name: worker
           image: nexora-api # même image que l'API, autre commande
-          command: ["node", "src/worker.js"]
+          command: ["node", "--import", "./src/tracing.js", "src/worker.js"]
+          env:
+            - { name: OTEL_SERVICE_NAME, value: nexora-worker }
           envFrom:
             - configMapRef: { name: nexora-config }
             - secretRef: { name: nexora-secrets }
+          ports:
+            - { name: metrics, containerPort: 9464 }
+          livenessProbe:
+            httpGet: { path: /healthz, port: metrics }
+            initialDelaySeconds: 15
+            periodSeconds: 20
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 384Mi }

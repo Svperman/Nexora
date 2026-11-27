@@ -6,3 +6,6 @@ dist/
 *.log
 coverage/
 .DS_Store
+# Valeurs publiques de build (URL de l API), pas de secret
+!client/.env.production
+server/uploads/

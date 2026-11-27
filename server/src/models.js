@@ -42,12 +42,32 @@ const refreshTokenSchema = new Schema(
 );
 refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+/** Résultat de la modération IA, puis éventuellement de la revue humaine. */
+const moderationSchema = new Schema(
+  {
+    status: { type: String, enum: ['approved', 'pending_review'], default: 'approved', index: true },
+    decision: { type: String },
+    categories: [{ type: String }],
+    reason: { type: String },
+    reviewedBy: { type: ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
+const imageSchema = new Schema(
+  { url: { type: String, required: true }, publicId: String, width: Number, height: Number },
+  { _id: false },
+);
+
 const postSchema = new Schema(
   {
     author: { type: ObjectId, ref: 'User', required: true, index: true },
-    content: { type: String, required: true, maxlength: 2000 },
+    content: { type: String, default: '', maxlength: 2000 },
+    images: { type: [imageSchema], default: [], validate: (v) => v.length <= 4 },
     likes: [{ type: ObjectId, ref: 'User' }],
     commentCount: { type: Number, default: 0 },
+    moderation: { type: moderationSchema, default: () => ({}) },
   },
   { timestamps: true, toJSON },
 );
@@ -58,6 +78,7 @@ const commentSchema = new Schema(
     post: { type: ObjectId, ref: 'Post', required: true, index: true },
     author: { type: ObjectId, ref: 'User', required: true },
     content: { type: String, required: true, maxlength: 1000 },
+    moderation: { type: moderationSchema, default: () => ({}) },
   },
   { timestamps: true, toJSON },
 );

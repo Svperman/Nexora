@@ -10,7 +10,10 @@ export const useRealtime = create((set, get) => ({
 
   connect(token) {
     get().socket?.close();
-    const socket = io({ auth: { token }, transports: ['websocket'] });
+    // En dev : même origine (proxy Vite). En prod sur Vercel : connexion directe à l'API (Render),
+    // car les rewrites Vercel ne relaient pas les WebSocket. L'auth passe par le token, pas par cookie.
+    const url = import.meta.env.VITE_SOCKET_URL || undefined;
+    const socket = io(url, { auth: { token }, transports: ['websocket'] });
     socket.on('connect_error', async (err) => {
       if (err.message === 'unauthorized') {
         try {
