@@ -95,7 +95,7 @@ Le rôle se change en base (collection `users`, champ `role: "admin"`), puis via
 |---|---|
 | 1. Dépôt Git | ✅ |
 | 2. Génération du code (MVP) | ✅ auth, feed, commentaires, chat, notifications, RGPD, admin de base |
-| 3. Environnement staging | ⏳ manifests Kubernetes (API, worker, HPA, Ingress, NetworkPolicies, External Secrets) |
+| 3. Environnement staging | 🟡 manifests Kubernetes et images prêts ([k8s/README.md](k8s/README.md)) ; reste à choisir le cluster, le domaine et le gestionnaire de secrets |
 | 4. Développement fonctionnel | ⏳ upload Multer + Cloudinary, modération IA, WebRTC, i18n, Recharts, observabilité (Prometheus, Grafana, OpenTelemetry, Jaeger), k6, Cosign + SLSA |
 | 5. Production | ⏳ |
 
@@ -108,3 +108,9 @@ Le rôle se change en base (collection `users`, champ `role: "admin"`), puis via
 | 2026-11-27 | Redis optionnel (file + adapter activés seulement si `REDIS_URL`) | Pouvoir développer sans aucun service externe |
 | 2026-11-27 | Vite proxifie `/api` et `/socket.io` | Même origine ⇒ cookie refresh `SameSite=Strict` fonctionnel |
 | 2026-11-27 | Pagination par curseur `_id` | Infinite scroll stable même si de nouveaux posts arrivent |
+| 2026-11-27 | Kustomize (base + overlay staging) plutôt que Helm | Lisible, intégré à `kubectl`, suffisant pour 2 environnements |
+| 2026-11-27 | Images sur GHCR, taguées `main` et `sha-<commit>` | Gratuit avec GitHub, traçabilité commit → image |
+| 2026-11-27 | Front servi par nginx derrière le même Ingress que l'API | Une seule origine ⇒ cookie refresh `SameSite=Strict` sans CORS |
+| 2026-11-27 | Worker = même image que l'API | Une seule image à construire, scanner et signer |
+| 2026-11-27 | External Secrets avec Doppler en exemple pour le staging | Aucun secret dans Git ; fournisseur remplaçable via le SecretStore |
+| 2026-11-27 | Redis interne au cluster en option, Socket.IO en WebSocket seul | Pas besoin de sticky sessions avec plusieurs réplicas API |

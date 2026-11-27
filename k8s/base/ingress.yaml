@@ -1,0 +1,33 @@
+# Prérequis : ingress-nginx + cert-manager avec un ClusterIssuer "letsencrypt".
+# Une seule origine (même domaine pour le front, /api et /socket.io) :
+# le cookie refresh SameSite=Strict fonctionne sans CORS.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexora
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+    # Connexions WebSocket longues
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # HSTS : activé par défaut par ingress-nginx sur les hôtes TLS.
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [nexora.example.com]
+      secretName: nexora-tls
+  rules:
+    - host: nexora.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: { service: { name: nexora-api, port: { name: http } } }
+          - path: /socket.io
+            pathType: Prefix
+            backend: { service: { name: nexora-api, port: { name: http } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: nexora-web, port: { name: http } } }

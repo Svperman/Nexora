@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexora-config
+data:
+  NODE_ENV: production
+  PORT: "4000"
+  CLIENT_ORIGIN: https://nexora.example.com
+  ACCESS_TOKEN_TTL: 15m
+  REFRESH_TOKEN_TTL_DAYS: "30"
+  LOG_LEVEL: info

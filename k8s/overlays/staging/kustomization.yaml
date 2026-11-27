@@ -1,0 +1,56 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: nexora-staging
+
+resources:
+  - namespace.yaml
+  - secret-store.yaml
+  - ../../base
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: staging
+    includeSelectors: false
+
+# Remplacer par le tag de commit (sha) publié par le workflow "Images".
+images:
+  - name: nexora-api
+    newName: ghcr.io/svperman/nexora-api
+    newTag: main
+  - name: nexora-web
+    newName: ghcr.io/svperman/nexora-web
+    newTag: main
+
+patches:
+  # Domaine de staging (à adapter)
+  - target: { kind: Ingress, name: nexora }
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: staging.nexora.example.com
+      - op: replace
+        path: /spec/rules/0/host
+        value: staging.nexora.example.com
+      - op: replace
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt-staging
+  - target: { kind: ConfigMap, name: nexora-config }
+    patch: |-
+      - op: replace
+        path: /data/CLIENT_ORIGIN
+        value: https://staging.nexora.example.com
+      - op: replace
+        path: /data/LOG_LEVEL
+        value: debug
+  # Staging plus léger
+  - target: { kind: HorizontalPodAutoscaler, name: nexora-api }
+    patch: |-
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+  - target: { kind: Deployment, name: nexora-web }
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
