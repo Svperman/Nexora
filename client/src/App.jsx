@@ -12,6 +12,7 @@ import Settings from './pages/Settings.jsx';
 import Admin from './pages/Admin.jsx';
 import Moderation from './pages/Moderation.jsx';
 import CallOverlay from './components/CallOverlay.jsx';
+import ServerStatus from './components/ServerStatus.jsx';
 
 const isModerator = (user) => ['admin', 'moderator'].includes(user.role);
 
@@ -78,7 +79,7 @@ export default function App() {
   useEffect(() => (socket ? bindCalls(socket) : undefined), [socket, bindCalls]);
 
   if (!ready) return <div className="center muted">{t('app.loading')}</div>;
-  if (!user || !accessToken) return <AuthPage />;
+  if (!user || !accessToken) return <><ServerStatus /><AuthPage /></>;
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
@@ -87,6 +88,7 @@ export default function App() {
 
   return (
     <div className="layout">
+      <ServerStatus />
       <header className="topbar">
         <span className="brand">Nexora</span>
         <nav>

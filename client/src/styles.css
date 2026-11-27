@@ -182,3 +182,9 @@ label.file.disabled { opacity: .5; cursor: default; }
 .call-controls .hangup { background: #d63a40; color: #fff; }
 button.ghost.light { color: #fff; border: 1px solid rgb(255 255 255 / .35); }
 button.ghost.light:hover { background: rgb(255 255 255 / .12); }
+
+.server-down {
+  position: sticky; top: 0; z-index: 20; display: flex; gap: 12px; align-items: center; justify-content: center;
+  flex-wrap: wrap; padding: 10px 16px; background: #8a4f00; color: #fff; text-align: center;
+}
+.server-down button.ghost { color: #fff; border: 1px solid rgb(255 255 255 / .6); }

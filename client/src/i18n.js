@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 const fr = {
   'app.loading': 'Chargement…',
+  'server.down': 'Le serveur ne répond pas. Il démarre peut-être (jusqu’à 1 minute).', 'server.retry': 'Réessayer', 'server.retrying': 'Connexion…',
   'nav.feed': 'Fil', 'nav.messages': 'Messages', 'nav.account': 'Compte', 'nav.moderation': 'Modération', 'nav.admin': 'Admin',
   'nav.logout': 'Déconnexion',
   'notif.title': 'Notifications ({n} non lues)', 'notif.empty': 'Aucune notification', 'notif.someone': "Quelqu'un",
@@ -36,6 +37,7 @@ const fr = {
 
 const en = {
   'app.loading': 'Loading…',
+  'server.down': 'The server is not responding. It may be starting up (up to 1 minute).', 'server.retry': 'Retry', 'server.retrying': 'Connecting…',
   'nav.feed': 'Feed', 'nav.messages': 'Messages', 'nav.account': 'Account', 'nav.moderation': 'Moderation', 'nav.admin': 'Admin',
   'nav.logout': 'Log out',
   'notif.title': 'Notifications ({n} unread)', 'notif.empty': 'No notifications', 'notif.someone': 'Someone',

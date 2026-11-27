@@ -1,10 +1,39 @@
 import { useAuth } from './store/auth.js';
 
+// Au-delà, on considère l'API injoignable (l'offre gratuite Render met ~30-60 s à se réveiller).
+const TIMEOUT_MS = 25_000;
+const UPLOAD_TIMEOUT_MS = 60_000;
+
 let refreshing = null;
+
+/** Erreur "serveur injoignable" : délai dépassé, réseau coupé ou passerelle en erreur (502/503/504). */
+function offlineError() {
+  const err = new Error('Serveur injoignable');
+  err.offline = true;
+  err.status = 0;
+  return err;
+}
+
+/** fetch vers l'API avec délai maximal ; met à jour l'indicateur "serveur injoignable". */
+async function apiFetch(url, init, timeoutMs = TIMEOUT_MS) {
+  let res;
+  try {
+    res = await fetch(url, { credentials: 'same-origin', ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch {
+    useAuth.getState().setServerDown(true);
+    throw offlineError();
+  }
+  if ([502, 503, 504].includes(res.status) && !res.headers.get('content-type')?.includes('application/json')) {
+    useAuth.getState().setServerDown(true);
+    throw offlineError();
+  }
+  useAuth.getState().setServerDown(false);
+  return res;
+}
 
 /** Rafraîchit l'access token une seule fois même si plusieurs requêtes échouent en parallèle. */
 export function refreshSession() {
-  refreshing ??= fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' })
+  refreshing ??= apiFetch('/api/auth/refresh', { method: 'POST' })
     .then(async (res) => {
       if (!res.ok) throw new Error('session');
       const data = await res.json();
@@ -21,9 +50,8 @@ export function refreshSession() {
 
 export async function api(path, { method = 'GET', body, retry = true } = {}) {
   const token = useAuth.getState().accessToken;
-  const res = await fetch(`/api${path}`, {
+  const res = await apiFetch(`/api${path}`, {
     method,
-    credentials: 'same-origin',
     headers: {
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -56,12 +84,11 @@ export async function uploadImage(file, retry = true) {
   const body = new FormData();
   body.append('image', file);
   const token = useAuth.getState().accessToken;
-  const res = await fetch('/api/uploads', {
+  const res = await apiFetch('/api/uploads', {
     method: 'POST',
-    credentials: 'same-origin',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body,
-  });
+  }, UPLOAD_TIMEOUT_MS);
   if (res.status === 401 && retry && token) {
     await refreshSession();
     return uploadImage(file, false);
