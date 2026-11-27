@@ -1,0 +1,14 @@
+# Alternative locale aux services cloud (nécessite Docker Desktop).
+# Usage : docker compose up -d   puis dans server/.env :
+#   MONGO_URI=mongodb://localhost:27017/nexora
+#   REDIS_URL=redis://localhost:6379
+services:
+  mongo:
+    image: mongo:7
+    ports: ['27017:27017']
+    volumes: [mongo-data:/data/db]
+  redis:
+    image: redis:7-alpine
+    ports: ['6379:6379']
+volumes:
+  mongo-data:
